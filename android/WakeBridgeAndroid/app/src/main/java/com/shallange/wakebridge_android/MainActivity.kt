@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -66,9 +67,14 @@ fun WakeBridgeScreen(modifier: Modifier = Modifier) {
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-
-                Text(text = "ESP32: Offline")
-                Text(text = "PC: Offline")
+                StatusRow(
+                    name = "ESP32",
+                    status = "Offline"
+                )
+                StatusRow(
+                    name = "PC",
+                    status = "Offline"
+                )
             }
         }
 
@@ -90,6 +96,24 @@ fun WakeBridgeScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun StatusRow(
+    name: String,
+    status: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            fontWeight = FontWeight.Medium
+        )
+        Text(text = status)
+
+    }
+}
 
 @Preview(showBackground = true)
 @Composable
