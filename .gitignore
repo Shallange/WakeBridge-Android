@@ -5,8 +5,7 @@ Thumbs.db
 # Environment / secrets
 .env
 *.env
-secrets.*
-credentials.*
+secrets.h
 *.key
 *.pem
 
