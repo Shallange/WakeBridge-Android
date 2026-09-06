@@ -7,11 +7,15 @@
 #define WOL_BROADCAST_IP "192.168.1.255"
 #define WOL_PORT 9
 
+#define MQTT_CLIENT_ID "wakebridge-esp32"
 #define MQTT_COMMAND_TOPIC "wakebridge/desktop/command"
 #define MQTT_STATUS_TOPIC "wakebridge/desktop/status"
 
 WiFiUDP udp;
+// Secure TCP client used for MQTT over TLS.
 WiFiClientSecure secureClient;
+
+// MQTT client that uses the secure TLS connection above.
 PubSubClient mqttClient(secureClient);
 
 void setup() {
@@ -29,13 +33,16 @@ void setup() {
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
   // Temporary for initial MQTT/TLS connection testing
   // Replace with proper certificate verification later.
   secureClient.setInsecure();
+  // Connect to the HiveMQ broker after Wi-Fi is available.
   connectMqtt();
 }
 
 void loop() {
+  // Keeps the MQTT connection alive and processes incoming messages.
   mqttClient.loop();
   // Temporary local test:
   // send a WoL packet when 'w' is entered in the Serial Monitor.
@@ -50,7 +57,7 @@ void loop() {
 
 void sendWakePacket() {
   // A Wake-on-LAN magic packet contains:
-  // 6 bytes of 0xFF followed by the target MAC adress repeated 16 times.
+  // 6 bytes of 0xFF followed by the target MAC address repeated 16 times.
   uint8_t packet[102];
 
   // Fill the first 6 bytes with 0xFF
@@ -58,7 +65,7 @@ void sendWakePacket() {
     packet[i] = 0xFF;
   }
 
-  // Reapeat the target PC's MAC address 16 times.
+  // Repeat the target PC's MAC address 16 times.
   for (int i = 1; i <= 16; i++) {
     for (int j = 0; j < 6; j++) {
       packet[i * 6 + j] = PC_MAC[j];
@@ -69,27 +76,56 @@ void sendWakePacket() {
   udp.write(packet, sizeof(packet));
   udp.endPacket();
 
-  Serial.println("Wake-on-Lan packet sent");
+  Serial.println("Wake-on-LAN packet sent");
 }
 
 void connectMqtt() {
+  // Configure the MQTT broker and the function that handles incoming messages.
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqttClient.setCallback(mqttCallback);
 
   Serial.print("Connecting to MQTT");
-
+  
+  // Keep trying until a connection to the broker succeeds.
   while (!mqttClient.connected()) {
     if (mqttClient.connect(
-      "wakebridge-esp32",
+      MQTT_CLIENT_ID,
       MQTT_USERNAME,
       MQTT_PASSWORD
     )) {
       Serial.println();
       Serial.println("MQTT connected");
+      mqttClient.subscribe(MQTT_COMMAND_TOPIC);
+      Serial.println("Subscribed to command topic");
+
     } else {
       Serial.print(".");
       Serial.print(" state=");
       Serial.println(mqttClient.state());
       delay(2000);
     }
+  }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  // Convert the incoming MQTT payload from raw bytes into a String.
+  String message;
+
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  Serial.print("Message received on topic: ");
+  Serial.println(topic);
+
+  Serial.print("Payload: ");
+  Serial.println(message);
+
+  // Trigger Wake-on-LAN when the expected MQTT command is received.
+  if (
+    strcmp(topic, MQTT_COMMAND_TOPIC) == 0 &&
+    message == "WAKE"
+  ) {
+    sendWakePacket();
   }
 }
