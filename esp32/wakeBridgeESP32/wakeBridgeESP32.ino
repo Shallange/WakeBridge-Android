@@ -42,17 +42,11 @@ void setup() {
 }
 
 void loop() {
+  if (!mqttClient.connected()) {
+    connectMqtt();
+  }
   // Keeps the MQTT connection alive and processes incoming messages.
   mqttClient.loop();
-  // Temporary local test:
-  // send a WoL packet when 'w' is entered in the Serial Monitor.
-  if (Serial.available()) {
-    char command = Serial.read();
-
-    if(command == 'w') {
-      sendWakePacket();
-    }
-  }
 }
 
 void sendWakePacket() {
@@ -127,7 +121,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     message == "WAKE"
   ) {
     sendWakePacket();
+    // Confirm that the ESP32 processed the wake command.
+    mqttClient.publish(MQTT_STATUS_TOPIC, "wake_sent");
   }
-  // Confirm that the ESP32 processed the wake command.
-  mqttClient.publish(MQTT_STATUS_TOPIC, "wake_sent");
 }
