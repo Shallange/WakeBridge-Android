@@ -9,3 +9,9 @@ const uint8_t PC_MAC[6] = {
   0x00, 0x00, 0x00,
   0x00, 0x00, 0x00
 };
+
+// MQTT credentials
+#define MQTT_HOST "your-host.s1.eu.hivemq.cloud"
+#define MQTT_PORT 8883
+#define MQTT_USERNAME "USERNAME"
+#define MQTT_PASSWORD "PASSWORD"

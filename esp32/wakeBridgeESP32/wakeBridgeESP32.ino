@@ -1,11 +1,18 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 #include "secrets.h"
 
 #define WOL_BROADCAST_IP "192.168.1.255"
 #define WOL_PORT 9
 
+#define MQTT_COMMAND_TOPIC "wakebridge/desktop/command"
+#define MQTT_STATUS_TOPIC "wakebridge/desktop/status"
+
 WiFiUDP udp;
+WiFiClientSecure secureClient;
+PubSubClient mqttClient(secureClient);
 
 void setup() {
   Serial.begin(115200);
@@ -22,9 +29,14 @@ void setup() {
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  // Temporary for initial MQTT/TLS connection testing
+  // Replace with proper certificate verification later.
+  secureClient.setInsecure();
+  connectMqtt();
 }
 
 void loop() {
+  mqttClient.loop();
   // Temporary local test:
   // send a WoL packet when 'w' is entered in the Serial Monitor.
   if (Serial.available()) {
@@ -58,4 +70,26 @@ void sendWakePacket() {
   udp.endPacket();
 
   Serial.println("Wake-on-Lan packet sent");
+}
+
+void connectMqtt() {
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+
+  Serial.print("Connecting to MQTT");
+
+  while (!mqttClient.connected()) {
+    if (mqttClient.connect(
+      "wakebridge-esp32",
+      MQTT_USERNAME,
+      MQTT_PASSWORD
+    )) {
+      Serial.println();
+      Serial.println("MQTT connected");
+    } else {
+      Serial.print(".");
+      Serial.print(" state=");
+      Serial.println(mqttClient.state());
+      delay(2000);
+    }
+  }
 }
