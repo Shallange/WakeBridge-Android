@@ -128,4 +128,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   ) {
     sendWakePacket();
   }
+  // Confirm that the ESP32 processed the wake command.
+  mqttClient.publish(MQTT_STATUS_TOPIC, "wake_sent");
 }
