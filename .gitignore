@@ -15,3 +15,7 @@ secrets.h
 # Temporary files
 *.tmp
 *.temp
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
