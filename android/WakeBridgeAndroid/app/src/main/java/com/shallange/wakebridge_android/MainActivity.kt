@@ -24,11 +24,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.shallange.wakebridge_android.mqtt.MqttManager
 import com.shallange.wakebridge_android.ui.theme.WakeBridgeAndroidTheme
 
+
 class MainActivity : ComponentActivity() {
+    private val mqttManager = MqttManager(
+        host = BuildConfig.MQTT_HOST,
+        username = BuildConfig.MQTT_USERNAME,
+        password = BuildConfig.MQTT_PASSWORD
+    )
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        mqttManager.connect()
         enableEdgeToEdge()
         setContent {
             WakeBridgeAndroidTheme {

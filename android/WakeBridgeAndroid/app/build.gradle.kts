@@ -1,3 +1,9 @@
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    load(rootProject.file("local.properties").inputStream())
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -17,6 +23,24 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "MQTT_HOST",
+            "\"${localProperties.getProperty("MQTT_HOST")}\""
+        )
+
+        buildConfigField(
+            "String",
+            "MQTT_USERNAME",
+            "\"${localProperties.getProperty("MQTT_USERNAME")}\""
+        )
+
+        buildConfigField(
+            "String",
+            "MQTT_PASSWORD",
+            "\"${localProperties.getProperty("MQTT_PASSWORD")}\""
+        )
     }
 
     buildTypes {
@@ -32,10 +56,18 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/io.netty.versions.properties"
+        }
     }
 }
 
 dependencies {
+    implementation(libs.hivemq.mqtt.client)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
