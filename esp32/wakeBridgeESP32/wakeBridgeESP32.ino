@@ -21,6 +21,32 @@ PubSubClient mqttClient(secureClient);
 void setup() {
   Serial.begin(115200);
 
+  connectWiFi();
+
+  // Temporary for initial MQTT/TLS connection testing
+  // Replace with proper certificate verification later.
+  secureClient.setInsecure();
+  // Connect to the HiveMQ broker after Wi-Fi is available.
+  connectMqtt();
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi connection lost, reconnecting...");
+    WiFi.reconnect();
+    delay(1000);
+    return;
+  }
+
+  if (!mqttClient.connected()) {
+    connectMqtt();
+  }
+
+  // Keeps the MQTT connection alive and processes incoming messages.
+  mqttClient.loop();
+}
+
+void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
   
@@ -33,20 +59,6 @@ void setup() {
 
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
-  // Temporary for initial MQTT/TLS connection testing
-  // Replace with proper certificate verification later.
-  secureClient.setInsecure();
-  // Connect to the HiveMQ broker after Wi-Fi is available.
-  connectMqtt();
-}
-
-void loop() {
-  if (!mqttClient.connected()) {
-    connectMqtt();
-  }
-  // Keeps the MQTT connection alive and processes incoming messages.
-  mqttClient.loop();
 }
 
 void sendWakePacket() {
