@@ -42,7 +42,10 @@ class MainActivity : ComponentActivity() {
             WakeBridgeAndroidTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     WakeBridgeScreen(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        onWakeClick = {
+                            mqttManager.publishWakeCommand()
+                        }
                     )
                 }
             }
@@ -51,7 +54,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WakeBridgeScreen(modifier: Modifier = Modifier) {
+fun WakeBridgeScreen(
+    modifier: Modifier = Modifier,
+    onWakeClick: () -> Unit = {}
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -91,9 +97,7 @@ fun WakeBridgeScreen(modifier: Modifier = Modifier) {
         )
 
         Button(
-            onClick = {
-                // MQTT wake command later
-            },
+            onClick = onWakeClick,
             modifier = Modifier
                 .width(180.dp)
                 .height(56.dp)

@@ -33,4 +33,17 @@ class MqttManager(
                 }
             }
     }
+    fun publishWakeCommand() {
+        client.publishWith()
+            .topic("wakebridge/desktop/command")
+            .payload("WAKE".toByteArray())
+            .send()
+            .whenComplete { _, throwable ->
+                if (throwable == null) {
+                    println("WAKE command published")
+                } else {
+                    println("Failed to publish WAKE: ${throwable.message}")
+                }
+            }
+    }
 }
