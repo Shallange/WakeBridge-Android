@@ -10,6 +10,7 @@
 #define MQTT_CLIENT_ID "wakebridge-esp32"
 #define MQTT_COMMAND_TOPIC "wakebridge/desktop/command"
 #define MQTT_STATUS_TOPIC "wakebridge/desktop/status"
+#define MQTT_DEVICE_STATUS_TOPIC "wakebridge/esp32/status"
 
 WiFiUDP udp;
 // Secure TCP client used for MQTT over TLS.
@@ -97,12 +98,26 @@ void connectMqtt() {
     if (mqttClient.connect(
       MQTT_CLIENT_ID,
       MQTT_USERNAME,
-      MQTT_PASSWORD
+      MQTT_PASSWORD,
+      
+      // MQTT Last Will:
+      // If the ESP32 disconnects unexpectedly, the broker will
+      // automatically publish "offline" on this topic.
+      MQTT_DEVICE_STATUS_TOPIC,
+      0,        // QoS 0 is enough for simple online/offline presence.
+      true,     // Retain the offline status for future subscribers.
+      "offline" // Message published by the broker if the ESP32 disappears.
     )) {
       Serial.println();
       Serial.println("MQTT connected");
       mqttClient.subscribe(MQTT_COMMAND_TOPIC);
       Serial.println("Subscribed to command topic");
+      mqttClient.publish(
+        MQTT_DEVICE_STATUS_TOPIC,
+        "online",
+        true
+      );
+      Serial.println("Published ESP32 status: online");
 
     } else {
       Serial.print(".");
