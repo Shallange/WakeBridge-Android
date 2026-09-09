@@ -46,4 +46,24 @@ class MqttManager(
                 }
             }
     }
+
+    fun subscribeToStatus(onStatusReceived: (String) -> Unit) {
+        client.subscribeWith()
+            .topicFilter("wakebridge/desktop/status")
+            .callback { publish ->
+                val message = publish.payloadAsBytes.toString(Charsets.UTF_8)
+
+                println("Status received: $message")
+
+                onStatusReceived(message)
+            }
+            .send()
+            .whenComplete { _, throwable ->
+                if (throwable == null) {
+                    println("Subscribed to status topic")
+                } else {
+                    println("Failed to subscribe to status: ${throwable.message}")
+                }
+            }
+    }
 }

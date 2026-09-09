@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shallange.wakebridge_android.mqtt.MqttManager
 import com.shallange.wakebridge_android.ui.theme.WakeBridgeAndroidTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 
 class MainActivity : ComponentActivity() {
@@ -34,15 +37,29 @@ class MainActivity : ComponentActivity() {
         username = BuildConfig.MQTT_USERNAME,
         password = BuildConfig.MQTT_PASSWORD
     )
+    private var esp32Status by mutableStateOf("Offline")
+    private var lastStatus by mutableStateOf("Waiting")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mqttManager.connect()
+        mqttManager.subscribeToStatus { status ->
+            runOnUiThread {
+                lastStatus = status
+
+                if (status == "wake_sent") {
+                    esp32Status = "Online"
+                }
+            }
+        }
         enableEdgeToEdge()
         setContent {
             WakeBridgeAndroidTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     WakeBridgeScreen(
                         modifier = Modifier.padding(innerPadding),
+                        esp32Status = esp32Status,
+                        lastStatus = lastStatus,
                         onWakeClick = {
                             mqttManager.publishWakeCommand()
                         }
@@ -56,6 +73,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WakeBridgeScreen(
     modifier: Modifier = Modifier,
+    esp32Status: String = "Offline",
+    lastStatus: String = "Waiting",
     onWakeClick: () -> Unit = {}
 ) {
     Column(
@@ -83,11 +102,15 @@ fun WakeBridgeScreen(
                 )
                 StatusRow(
                     name = "ESP32",
-                    status = "Offline"
+                    status = esp32Status
                 )
                 StatusRow(
                     name = "PC",
-                    status = "Offline"
+                    status = "Unknown"
+                )
+                StatusRow(
+                    name = "Last command",
+                    status = lastStatus
                 )
             }
         }
