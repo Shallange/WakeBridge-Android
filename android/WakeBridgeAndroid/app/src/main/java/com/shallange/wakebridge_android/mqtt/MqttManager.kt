@@ -66,4 +66,23 @@ class MqttManager(
                 }
             }
     }
+    fun subscribeToEsp32Status(onStatusReceived: (String) -> Unit) {
+        client.subscribeWith()
+            .topicFilter("wakebridge/esp32/status")
+            .callback { publish ->
+                val message = publish.payloadAsBytes.toString(Charsets.UTF_8)
+
+                println("ESP32 status received: $message")
+
+                onStatusReceived(message)
+            }
+            .send()
+            .whenComplete { _, throwable ->
+                if (throwable == null) {
+                    println("Subscribed to ESP32 status topic")
+                } else {
+                    println("Failed to subscribe to ESP32 status: ${throwable.message}")
+                }
+            }
+    }
 }

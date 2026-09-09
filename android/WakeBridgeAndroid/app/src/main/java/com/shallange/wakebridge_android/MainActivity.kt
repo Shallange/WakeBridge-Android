@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         username = BuildConfig.MQTT_USERNAME,
         password = BuildConfig.MQTT_PASSWORD
     )
-    private var esp32Status by mutableStateOf("Offline")
+    private var esp32Status by mutableStateOf("Connecting...")
     private var lastStatus by mutableStateOf("Waiting")
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,10 +45,17 @@ class MainActivity : ComponentActivity() {
         mqttManager.connect()
         mqttManager.subscribeToStatus { status ->
             runOnUiThread {
-                lastStatus = status
-
                 if (status == "wake_sent") {
-                    esp32Status = "Online"
+                    lastStatus = "Wake sent"
+                }
+            }
+        }
+        
+        mqttManager.subscribeToEsp32Status { status ->
+            runOnUiThread {
+                when (status) {
+                    "online" -> esp32Status = "Online"
+                    "offline" -> esp32Status = "Offline"
                 }
             }
         }
@@ -73,7 +80,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WakeBridgeScreen(
     modifier: Modifier = Modifier,
-    esp32Status: String = "Offline",
+    esp32Status: String = "Connecting...",
     lastStatus: String = "Waiting",
     onWakeClick: () -> Unit = {}
 ) {
