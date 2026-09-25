@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
     )
     private var esp32Status by mutableStateOf("Connecting...")
     private var lastStatus by mutableStateOf("Waiting")
+    private var isWaking by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 if (status == "wake_sent") {
                     lastStatus = "Wake sent"
+                    isWaking = false
                 }
             }
         }
@@ -75,8 +77,20 @@ class MainActivity : ComponentActivity() {
                     WakeBridgeScreen(
                         modifier = Modifier.padding(innerPadding),
                         esp32Status = esp32Status,
+                        lastStatus = lastStatus,
+                        isWaking = isWaking,
                         onWakeClick = {
-                            mqttManager.publishWakeCommand()
+                            isWaking = true
+                            lastStatus = "Sending"
+                            mqttManager.publishWakeCommand { success ->
+                                if (!success) {
+                                    runOnUiThread {
+                                        isWaking = false
+                                        lastStatus = "Failed"
+                                    }
+                                }
+
+                            }
                         }
                     )
                 }
@@ -89,6 +103,8 @@ class MainActivity : ComponentActivity() {
 fun WakeBridgeScreen(
     modifier: Modifier = Modifier,
     esp32Status: String = "Connecting...",
+    lastStatus: String = "Waiting",
+    isWaking: Boolean = false,
     onWakeClick: () -> Unit = {}
 ) {
     Column(
@@ -104,6 +120,8 @@ fun WakeBridgeScreen(
         Spacer(modifier = Modifier.height(20.dp))
         PcCard(
             pcStatus = "Unknown",
+            lastStatus = lastStatus,
+            isWaking = isWaking,
             onWakeClick = onWakeClick
         )
 
@@ -118,6 +136,8 @@ fun WakeBridgeScreen(
 @Composable
 fun PcCard(
     pcStatus: String,
+    lastStatus: String,
+    isWaking: Boolean,
     onWakeClick: () -> Unit
 ) {
     Card(
@@ -140,16 +160,31 @@ fun PcCard(
             StatusIndicator(
                 status = pcStatus
             )
+            Text(
+                text = when (lastStatus) {
+                    "Sending" -> "Sending wake command..."
+                    "Wake sent" -> "Wake command sent"
+                    "Failed" -> "Failed to send wake command"
+                    else -> "Ready to wake"
+                },
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Button(
                 onClick = onWakeClick,
+                enabled = !isWaking,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
-                    text = "Wake PC",
+                    text = when{
+                        isWaking -> "Waking..."
+                        lastStatus == "Failed" -> "Try again"
+                        else -> "Wake PC"
+                    },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )

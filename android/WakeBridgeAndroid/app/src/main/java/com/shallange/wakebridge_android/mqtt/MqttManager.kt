@@ -33,7 +33,7 @@ class MqttManager(
                 }
             }
     }
-    fun publishWakeCommand() {
+    fun publishWakeCommand(onResult: (Boolean) -> Unit) {
         client.publishWith()
             .topic("wakebridge/desktop/command")
             .payload("WAKE".toByteArray())
@@ -41,8 +41,10 @@ class MqttManager(
             .whenComplete { _, throwable ->
                 if (throwable == null) {
                     println("WAKE command published")
+                    onResult(true)
                 } else {
                     println("Failed to publish WAKE: ${throwable.message}")
+                    onResult(false)
                 }
             }
     }
