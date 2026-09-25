@@ -138,6 +138,7 @@ fun WakeBridgeScreen(
             pcStatus = "Unknown",
             lastStatus = lastStatus,
             isWaking = isWaking,
+            bridgeOnline = esp32Status == "Online",
             onWakeClick = onWakeClick
         )
 
@@ -154,6 +155,7 @@ fun PcCard(
     pcStatus: String,
     lastStatus: String,
     isWaking: Boolean,
+    bridgeOnline: Boolean,
     onWakeClick: () -> Unit
 ) {
     Card(
@@ -177,11 +179,12 @@ fun PcCard(
                 status = pcStatus
             )
             Text(
-                text = when (lastStatus) {
-                    "Sending" -> "Sending wake command..."
-                    "Wake sent" -> "Wake command sent"
-                    "Failed" -> "Failed to send wake command"
-                    "Timeout" -> "No response from bridge"
+                text = when {
+                    !bridgeOnline -> "Bridge is offline"
+                    lastStatus == "Sending" -> "Sending wake command..."
+                    lastStatus == "Wake sent" -> "Wake command sent"
+                    lastStatus == "Failed" -> "Failed to send wake command"
+                    lastStatus == "Timeout" -> "No response from bridge"
                     else -> "Ready to wake"
                 },
                 fontSize = 14.sp,
@@ -190,7 +193,7 @@ fun PcCard(
 
             Button(
                 onClick = onWakeClick,
-                enabled = !isWaking,
+                enabled = !isWaking && bridgeOnline,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -198,6 +201,7 @@ fun PcCard(
             ) {
                 Text(
                     text = when{
+                        !bridgeOnline -> "Bridge offline"
                         isWaking -> "Waking..."
                         lastStatus == "Failed" || lastStatus == "Timeout" -> "Try again"
                         else -> "Wake PC"
