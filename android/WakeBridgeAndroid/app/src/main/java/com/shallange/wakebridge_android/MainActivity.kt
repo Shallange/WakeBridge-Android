@@ -29,6 +29,15 @@ import com.shallange.wakebridge_android.ui.theme.WakeBridgeAndroidTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 
 
 class MainActivity : ComponentActivity() {
@@ -66,7 +75,6 @@ class MainActivity : ComponentActivity() {
                     WakeBridgeScreen(
                         modifier = Modifier.padding(innerPadding),
                         esp32Status = esp32Status,
-                        lastStatus = lastStatus,
                         onWakeClick = {
                             mqttManager.publishWakeCommand()
                         }
@@ -81,7 +89,6 @@ class MainActivity : ComponentActivity() {
 fun WakeBridgeScreen(
     modifier: Modifier = Modifier,
     esp32Status: String = "Connecting...",
-    lastStatus: String = "Waiting",
     onWakeClick: () -> Unit = {}
 ) {
     Column(
@@ -90,70 +97,126 @@ fun WakeBridgeScreen(
             .padding(24.dp),
     ) {
         Text(
-            text = "Wake Bridge",
+            text = "WakeBridge",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(20.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Device status",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                StatusRow(
-                    name = "ESP32",
-                    status = esp32Status
-                )
-                StatusRow(
-                    name = "PC",
-                    status = "Unknown"
-                )
-                StatusRow(
-                    name = "Last command",
-                    status = lastStatus
-                )
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(80.dp)
+        PcCard(
+            pcStatus = "Unknown",
+            onWakeClick = onWakeClick
         )
 
-        Button(
-            onClick = onWakeClick,
-            modifier = Modifier
-                .width(180.dp)
-                .height(56.dp)
-                .align(Alignment.CenterHorizontally)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        BridgeStatusCard(
+            esp32Status = esp32Status
+        )
+    }
+}
+
+@Composable
+fun PcCard(
+    pcStatus: String,
+    onWakeClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(text = "Wake PC")
+            Text(
+                text = "PC",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            StatusIndicator(
+                status = pcStatus
+            )
+
+            Button(
+                onClick = onWakeClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = "Wake PC",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
 
 @Composable
-fun StatusRow(
-    name: String,
+fun BridgeStatusCard(
+    esp32Status: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Bridge",
+                fontWeight = FontWeight.Medium
+            )
+
+            StatusIndicator(
+                status = esp32Status
+            )
+        }
+    }
+}
+
+@Composable
+fun StatusIndicator(
     status: String
 ) {
+    val statusColor = when (status) {
+        "Online" -> Color(0xFF4CAF50)
+        "Offline" -> Color(0xFFF44336)
+        "Connecting..." -> Color(0xFFFFC107)
+        else -> Color.Gray
+    }
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(
+                    color = statusColor,
+                    shape = CircleShape
+                )
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Text(
-            text = name,
+            text = status,
             fontWeight = FontWeight.Medium
         )
-        Text(text = status)
-
     }
 }
 
