@@ -37,7 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-
+import android.os.Handler
+import android.os.Looper
 
 
 class MainActivity : ComponentActivity() {
@@ -50,12 +51,22 @@ class MainActivity : ComponentActivity() {
     private var lastStatus by mutableStateOf("Waiting")
     private var isWaking by mutableStateOf(false)
 
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val wakeTimeout = Runnable{
+        if (isWaking) {
+            isWaking = false
+            lastStatus = "Timeout"
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mqttManager.connect()
         mqttManager.subscribeToStatus { status ->
             runOnUiThread {
                 if (status == "wake_sent") {
+                    handler.removeCallbacks(wakeTimeout)
                     lastStatus = "Wake sent"
                     isWaking = false
                 }
@@ -82,9 +93,14 @@ class MainActivity : ComponentActivity() {
                         onWakeClick = {
                             isWaking = true
                             lastStatus = "Sending"
+
+                            handler.removeCallbacks(wakeTimeout)
+                            handler.postDelayed(wakeTimeout, 5000)
+
                             mqttManager.publishWakeCommand { success ->
                                 if (!success) {
                                     runOnUiThread {
+                                        handler.removeCallbacks(wakeTimeout)
                                         isWaking = false
                                         lastStatus = "Failed"
                                     }
@@ -165,6 +181,7 @@ fun PcCard(
                     "Sending" -> "Sending wake command..."
                     "Wake sent" -> "Wake command sent"
                     "Failed" -> "Failed to send wake command"
+                    "Timeout" -> "No response from bridge"
                     else -> "Ready to wake"
                 },
                 fontSize = 14.sp,
@@ -182,7 +199,7 @@ fun PcCard(
                 Text(
                     text = when{
                         isWaking -> "Waking..."
-                        lastStatus == "Failed" -> "Try again"
+                        lastStatus == "Failed" || lastStatus == "Timeout" -> "Try again"
                         else -> "Wake PC"
                     },
                     fontSize = 16.sp,
