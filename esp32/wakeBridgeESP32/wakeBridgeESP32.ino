@@ -5,6 +5,7 @@
 #include "ping/ping_sock.h"
 #include <time.h>
 #include "secrets.h"
+#include "mqtt_ca.h"
 
 #define WOL_BROADCAST_IP "192.168.1.255"
 #define WOL_PORT 9
@@ -21,6 +22,10 @@
 #define MQTT_CHECK_TOPIC "wakebridge/desktop/check"
 #define MQTT_POWER_TOPIC "wakebridge/desktop/power"
 #define MQTT_DEVICE_STATUS_TOPIC "wakebridge/esp32/status"
+
+// A clock still at the epoch fails TLS certificate date checks.
+static const time_t MIN_VALID_TIME = 1704067200;  // 2024-01-01 00:00:00 UTC
+static const unsigned long NTP_WAIT_MS = 15000;
 
 WiFiUDP udp;
 // Secure TCP client used for MQTT over TLS.
@@ -42,18 +47,45 @@ unsigned long lastWakeCheckMs = 0;
 char pendingPowerPayload[32] = "";
 bool powerPublishPending = false;
 
+bool clockIsValid() {
+  return time(nullptr) >= MIN_VALID_TIME;
+}
+
+// SNTP is started with configTime() and finishes in the background.
+// TLS is attempted only after this returns true.
+bool waitForClock() {
+  Serial.print("Waiting for NTP");
+  unsigned long startedMs = millis();
+  while (!clockIsValid() && millis() - startedMs < NTP_WAIT_MS) {
+    delay(250);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  if (!clockIsValid()) {
+    Serial.println("NTP time not available; TLS will retry");
+    return false;
+  }
+
+  time_t now = time(nullptr);
+  struct tm timeinfo;
+  gmtime_r(&now, &timeinfo);
+  char timestamp[32];
+  strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S UTC", &timeinfo);
+  Serial.print("NTP time is valid: ");
+  Serial.println(timestamp);
+  return true;
+}
+
 void setup() {
   Serial.begin(115200);
 
   connectWiFi();
-  // Non-blocking. Timestamps stay 0 until the clock syncs.
   configTime(0, 0, "pool.ntp.org");
-
-  // Temporary for initial MQTT/TLS connection testing
-  // Replace with proper certificate verification later.
-  secureClient.setInsecure();
-  // Connect to the HiveMQ broker after Wi-Fi is available.
-  connectMqtt();
+  secureClient.setCACert(MQTT_ROOT_CA);
+  if (waitForClock()) {
+    connectMqtt();
+  }
 }
 
 void loop() {
@@ -65,6 +97,11 @@ void loop() {
   }
 
   if (!mqttClient.connected()) {
+    if (!clockIsValid()) {
+      Serial.println("NTP time not available; skipping TLS");
+      delay(2000);
+      return;
+    }
     connectMqtt();
   }
 
@@ -151,6 +188,14 @@ void connectMqtt() {
       Serial.print(".");
       Serial.print(" state=");
       Serial.println(mqttClient.state());
+      char tlsError[96];
+      int tlsCode = secureClient.lastError(tlsError, sizeof(tlsError));
+      if (tlsCode != 0) {
+        Serial.print("TLS error ");
+        Serial.print(tlsCode);
+        Serial.print(": ");
+        Serial.println(tlsError);
+      }
       delay(2000);
     }
   }
