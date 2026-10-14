@@ -2,7 +2,7 @@
 
 WakeBridge powers on a Windows PC from an Android phone. An ESP32 on the home LAN sends the Wake-on-LAN packet over wired Ethernet and checks the PC with ping. The phone and the ESP32 connect through MQTT over TLS, so the phone can be away from home.
 
-The PC runs no WakeBridge software. The repository is the working system: a Kotlin and Jetpack Compose app, ESP32 firmware, MQTT, and a custom 3D-printed enclosure.
+The PC runs no WakeBridge software. The repository is the working system: a Kotlin and Jetpack Compose app, ESP32 firmware, and MQTT. The ESP32 is housed in a 3D-printed enclosure from an existing model.
 
 ## App preview
 
@@ -31,7 +31,7 @@ The home screen in each PC and bridge state. The bridge line stays separate from
 
 ## Hardware
 
-The ESP32 is mounted in a custom 3D-printed enclosure so it can stay powered on the desk as a finished device. The enclosure is part of the project, alongside the app and the firmware.
+The ESP32 is mounted in a 3D-printed enclosure so it can stay powered on the desk as a finished device. The model was not designed for WakeBridge. It is the existing [ESP32 DevKit V1 USB-C case](https://makerworld.com/sv/models/2189621-esp32-devkit-v1-usb-c-case#profileId-2377239) on MakerWorld.
 
 <table>
   <tr>
@@ -40,7 +40,7 @@ The ESP32 is mounted in a custom 3D-printed enclosure so it can stay powered on 
       <sub>Board installed</sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/images/enclosure-closed.jpg" alt="Closed printed WakeBridge enclosure" width="320"><br>
+      <img src="docs/images/enclosure-closed.jpg" alt="Closed 3D-printed enclosure" width="320"><br>
       <sub>Closed enclosure</sub>
     </td>
   </tr>
