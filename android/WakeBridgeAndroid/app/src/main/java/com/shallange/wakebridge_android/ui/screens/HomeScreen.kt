@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -138,7 +140,8 @@ fun WakeBridgeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(28.dp)
+                    shape = RoundedCornerShape(28.dp),
+                    colors = wakeButtonColors(stage)
                 ) {
                     Text(
                         text = "Wake PC",
@@ -205,6 +208,36 @@ private enum class PowerStage(val label: String) {
     Offline("Offline"),
     Unknown("Unknown"),
     Waking("Waking")
+}
+
+@Composable
+private fun wakeButtonColors(stage: PowerStage): ButtonColors {
+    return when (stage) {
+        PowerStage.Offline -> ButtonDefaults.buttonColors(
+            containerColor = OnlineColor,
+            contentColor = Color(0xFF062117),
+            disabledContainerColor = Color(0xFF1B3A2C),
+            disabledContentColor = OnlineColor.copy(alpha = 0.55f)
+        )
+        PowerStage.Online -> ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF1E3D30),
+            contentColor = Color(0xFFD4E8DE),
+            disabledContainerColor = Color(0xFF163028),
+            disabledContentColor = Color(0xFFD4E8DE).copy(alpha = 0.45f)
+        )
+        PowerStage.Waking -> ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF1A2433),
+            contentColor = WakingColor.copy(alpha = 0.85f),
+            disabledContainerColor = Color(0xFF1A2433),
+            disabledContentColor = WakingColor.copy(alpha = 0.85f)
+        )
+        PowerStage.Unknown -> ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContentColor = UnknownColor.copy(alpha = 0.8f)
+        )
+    }
 }
 
 private fun stageColor(stage: PowerStage, fresh: Boolean): Color {
