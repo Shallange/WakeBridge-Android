@@ -87,4 +87,65 @@ class MqttManager(
                 }
             }
     }
+
+    fun publishCheckCommand(onResult: (Boolean) -> Unit) {
+        client.publishWith()
+            .topic("wakebridge/desktop/check")
+            .payload("CHECK".toByteArray())
+            .send()
+            .whenComplete { _, throwable ->
+                if (throwable == null) {
+                    println("CHECK command published")
+                    onResult(true)
+                } else {
+                    println("Failed to publish CHECK: ${throwable.message}")
+                    onResult(false)
+                }
+            }
+    }
+
+    fun subscribeToPower(onPowerReceived: (String) -> Unit) {
+        client.subscribeWith()
+            .topicFilter("wakebridge/desktop/power")
+            .callback { publish ->
+                val message = publish.payloadAsBytes.toString(Charsets.UTF_8)
+
+                println("PC power received: $message")
+
+                onPowerReceived(message)
+            }
+            .send()
+            .whenComplete { _, throwable ->
+                if (throwable == null) {
+                    println("Subscribed to PC power topic")
+                } else {
+                    println("Failed to subscribe to PC power: ${throwable.message}")
+                }
+            }
+    }
+}
+
+data class PcPowerStatus(
+    val online: Boolean,
+    val checkedAtUnix: Long
+)
+
+fun parsePcPower(payload: String): PcPowerStatus? {
+    val parts = payload.trim().split('|')
+    if (parts.size != 2) {
+        return null
+    }
+
+    val online = when (parts[0]) {
+        "online" -> true
+        "offline" -> false
+        else -> return null
+    }
+
+    val checkedAtUnix = parts[1].toLongOrNull() ?: return null
+    if (checkedAtUnix < 0) {
+        return null
+    }
+
+    return PcPowerStatus(online, checkedAtUnix)
 }
