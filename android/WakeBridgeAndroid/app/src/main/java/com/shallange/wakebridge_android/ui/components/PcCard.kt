@@ -2,6 +2,8 @@ package com.shallange.wakebridge_android.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,6 +29,7 @@ fun PcCard(
     isWaking: Boolean,
     isChecking: Boolean,
     bridgeOnline: Boolean,
+    pcStatusFresh: Boolean,
     onWakeClick: () -> Unit,
     onCheckClick: () -> Unit
 ) {
@@ -37,23 +41,26 @@ fun PcCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            Text(
-                text = "PC",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "PC",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                StatusIndicator(
+                    status = pcStatus,
+                    emphasized = pcStatusFresh,
+                    prominent = true
+                )
+            }
 
-            StatusIndicator(
-                status = pcStatus
-            )
-            Text(
-                text = lastCheckedLabel,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = when {
                     !bridgeOnline -> "Bridge is offline"
@@ -61,8 +68,8 @@ fun PcCard(
                     isChecking -> "Checking..."
                     lastStatus == "Sending" -> "Sending wake command..."
                     lastStatus == "Wake sent" -> "Wake command sent"
-                    lastStatus == "Failed" -> "Failed to send wake command"
-                    lastStatus == "Timeout" -> "No response from bridge"
+                    lastStatus == "Failed" -> "Failed to send wake command. Try again."
+                    lastStatus == "Timeout" -> "No response from bridge. Try again."
                     lastStatus == "Not online" -> "PC did not come online"
                     lastStatus == "Check failed" -> "Failed to request status"
                     lastStatus == "Check timeout" -> "No status response"
@@ -71,7 +78,14 @@ fun PcCard(
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = lastCheckedLabel,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onWakeClick,
                 enabled = !isWaking && bridgeOnline,
@@ -81,31 +95,22 @@ fun PcCard(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
-                    text = when{
-                        !bridgeOnline -> "Bridge offline"
-                        isWaking -> "Waking..."
-                        lastStatus == "Failed" || lastStatus == "Timeout" -> "Try again"
-                        else -> "Wake PC"
-                    },
+                    text = "Wake PC",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
-
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onCheckClick,
                 enabled = bridgeOnline && !isChecking && !isWaking,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(48.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
-                    text = when {
-                        !bridgeOnline -> "Bridge offline"
-                        isChecking -> "Checking..."
-                        else -> "Check status"
-                    },
+                    text = "Check status",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )

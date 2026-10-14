@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,12 +27,14 @@ fun WakeBridgeScreen(
     lastStatus: String = "Waiting",
     isWaking: Boolean = false,
     isChecking: Boolean = false,
+    pcStatusFresh: Boolean = false,
     onWakeClick: () -> Unit = {},
     onCheckClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
         Text(
@@ -46,6 +50,7 @@ fun WakeBridgeScreen(
             isWaking = isWaking,
             isChecking = isChecking,
             bridgeOnline = esp32Status == "Online",
+            pcStatusFresh = pcStatusFresh,
             onWakeClick = onWakeClick,
             onCheckClick = onCheckClick
         )

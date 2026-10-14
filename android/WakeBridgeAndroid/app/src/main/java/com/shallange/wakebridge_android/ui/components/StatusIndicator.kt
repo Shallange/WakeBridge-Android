@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun StatusIndicator(
-    status: String
+    status: String,
+    emphasized: Boolean = true,
+    prominent: Boolean = false
 ) {
     val statusColor = when (status) {
         "Online" -> Color(0xFF4CAF50)
@@ -25,15 +29,16 @@ fun StatusIndicator(
         "Connecting..." -> Color(0xFFFFC107)
         else -> Color.Gray
     }
+    val dotColor = if (emphasized) statusColor else statusColor.copy(alpha = 0.45f)
 
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(10.dp)
+                .size(if (prominent) 12.dp else 10.dp)
                 .background(
-                    color = statusColor,
+                    color = dotColor,
                     shape = CircleShape
                 )
         )
@@ -42,7 +47,13 @@ fun StatusIndicator(
 
         Text(
             text = status,
-            fontWeight = FontWeight.Medium
+            fontSize = if (prominent) 16.sp else 14.sp,
+            fontWeight = if (prominent) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (emphasized) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }

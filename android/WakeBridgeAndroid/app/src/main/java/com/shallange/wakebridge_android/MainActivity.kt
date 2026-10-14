@@ -18,8 +18,11 @@ import com.shallange.wakebridge_android.ui.screens.WakeBridgeScreen
 import com.shallange.wakebridge_android.ui.theme.WakeBridgeAndroidTheme
 import android.os.Handler
 import android.os.Looper
-import java.text.DateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
@@ -33,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private var isWaking by mutableStateOf(false)
     private var isChecking by mutableStateOf(false)
     private var pcStatus by mutableStateOf("Unknown")
+    private var pcStatusFresh by mutableStateOf(false)
     private var lastCheckedLabel by mutableStateOf("Not checked yet")
 
     private var awaitingWakeAck = false
@@ -111,6 +115,7 @@ class MainActivity : ComponentActivity() {
                         lastStatus = lastStatus,
                         isWaking = isWaking,
                         isChecking = isChecking,
+                        pcStatusFresh = pcStatusFresh,
                         onWakeClick = { requestWake() },
                         onCheckClick = { requestCheck() }
                     )
@@ -197,6 +202,7 @@ class MainActivity : ComponentActivity() {
         if (status.checkedAtUnix == 0L) {
             if (lastPowerUnix == null) {
                 pcStatus = if (status.online) "Online" else "Offline"
+                pcStatusFresh = false
                 lastCheckedLabel = "Last checked: time unknown"
             }
             return false
@@ -209,7 +215,9 @@ class MainActivity : ComponentActivity() {
 
         lastPowerUnix = status.checkedAtUnix
         pcStatus = if (status.online) "Online" else "Offline"
-        lastCheckedLabel = "Last checked ${formatCheckedAt(status.checkedAtUnix)}"
+        val presentation = presentCheckedAt(status.checkedAtUnix)
+        lastCheckedLabel = presentation.label
+        pcStatusFresh = presentation.fresh
         return true
     }
 
@@ -236,14 +244,38 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
-    private fun formatCheckedAt(unixSeconds: Long): String {
-        val formatted = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-            .format(Date(unixSeconds * 1000))
-        return formatted
+    private fun presentCheckedAt(unixSeconds: Long): CheckedAtPresentation {
+        val zone = ZoneId.systemDefault()
+        val checked = Instant.ofEpochSecond(unixSeconds).atZone(zone)
+        val now = Instant.now().atZone(zone)
+        val ageSeconds = ChronoUnit.SECONDS.between(checked.toInstant(), now.toInstant())
+        val fresh = ageSeconds in -DISPLAY_CLOCK_SKEW_SEC..FRESH_STATUS_SEC
+        val time = checked.format(timeFormatter)
+
+        val label = when {
+            fresh -> "Checked at $time"
+            checked.toLocalDate() == now.toLocalDate() -> "Last known at $time"
+            checked.toLocalDate() == now.toLocalDate().minusDays(1) -> "Last known yesterday, $time"
+            else -> "Last known ${checked.format(dateFormatter)}, $time"
+        }
+        return CheckedAtPresentation(label, fresh)
     }
 }
+
+private data class CheckedAtPresentation(
+    val label: String,
+    val fresh: Boolean
+)
+
+private val timeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+
+private val dateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
 
 private const val WAKE_ACK_TIMEOUT_MS = 5_000L
 private const val WAKE_WATCH_TIMEOUT_MS = 60_000L
 private const val CHECK_TIMEOUT_MS = 10_000L
 private const val CLOCK_SKEW_SEC = 60L
+private const val DISPLAY_CLOCK_SKEW_SEC = 60L
+private const val FRESH_STATUS_SEC = 3 * 60L
