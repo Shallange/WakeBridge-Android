@@ -10,6 +10,13 @@ const uint8_t PC_MAC[6] = {
   0x00, 0x00, 0x00
 };
 
+// IPv4 address of the PC to check for reachability.
+// Example: 192.168.1.10
+#define PC_IP_1 192
+#define PC_IP_2 168
+#define PC_IP_3 1
+#define PC_IP_4 10
+
 // MQTT credentials
 #define MQTT_HOST "your-host.s1.eu.hivemq.cloud"
 #define MQTT_PORT 8883
