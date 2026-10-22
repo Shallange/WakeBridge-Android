@@ -18,8 +18,8 @@ const uint8_t PC_MAC[6] = {
 #define PC_IP_4 10
 
 // MQTT credentials. Keep real values in secrets.h only.
-// TLS trust is the public root in mqtt_ca.h, not a credential.
-#define MQTT_HOST "your-host.s1.eu.hivemq.cloud"
+// TLS trust is the public roots in mqtt_ca.h, not a credential.
+#define MQTT_HOST "your-mqtt-broker-hostname"
 #define MQTT_PORT 8883
 #define MQTT_USERNAME "USERNAME"
 #define MQTT_PASSWORD "PASSWORD"

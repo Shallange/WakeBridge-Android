@@ -1,35 +1,59 @@
 package com.shallange.wakebridge_android.mqtt
 
 import com.hivemq.client.mqtt.MqttClient
+import com.hivemq.client.mqtt.lifecycle.MqttClientAutoReconnect
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 
 class MqttManager(
     private val host: String,
     private val username: String,
-    private val password: String
+    private val password: String,
+    private val clientId: String
 ) {
 
     private val client: Mqtt3AsyncClient =
         MqttClient.builder()
             .useMqttVersion3()
-            .identifier("wakebridge-android")
+            .identifier(clientId)
             .serverHost(host)
             .serverPort(8883)
             .sslWithDefaultConfig()
-            .buildAsync()
-
-    fun connect() {
-        client.connectWith()
+            // Reconnect uses these client defaults. Auth passed only to connect() is not reused.
             .simpleAuth()
             .username(username)
             .password(password.toByteArray())
             .applySimpleAuth()
-            .send()
+            // Unexpected disconnects retry with backoff. The same subscriptions are sent again.
+            .automaticReconnectWithDefaultConfig()
+            .addConnectedListener { println("MQTT connected") }
+            .addDisconnectedListener { context ->
+                val cause = context.cause
+                println(
+                    "MQTT disconnected source=${context.source} " +
+                        "attempts=${context.reconnector.attempts} " +
+                        "cause=${cause.javaClass.simpleName}: ${cause.message}"
+                )
+            }
+            .buildAsync()
+
+    internal fun automaticReconnect(): MqttClientAutoReconnect? =
+        client.config.automaticReconnect.orElse(null)
+
+    internal fun reconnectHasConfiguredAuth(): Boolean {
+        val auth = client.config.simpleAuth.orElse(null) ?: return false
+        return auth.username.toString() == username && auth.password.isPresent
+    }
+
+    internal fun configuredClientId(): String =
+        client.config.clientIdentifier.map { it.toString() }.orElse("")
+
+    fun connect() {
+        client.connect()
             .whenComplete { _, throwable ->
-                if (throwable == null) {
-                    println("MQTT connected")
-                } else {
-                    println("MQTT connection failed: ${throwable.message}")
+                if (throwable != null) {
+                    println(
+                        "MQTT connection failed: ${throwable.javaClass.simpleName}: ${throwable.message}"
+                    )
                 }
             }
     }

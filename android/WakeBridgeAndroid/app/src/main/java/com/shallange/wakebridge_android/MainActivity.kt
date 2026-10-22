@@ -18,6 +18,7 @@ import com.shallange.wakebridge_android.ui.screens.WakeBridgeScreen
 import com.shallange.wakebridge_android.ui.theme.WakeBridgeAndroidTheme
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -26,11 +27,7 @@ import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
-    private val mqttManager = MqttManager(
-        host = BuildConfig.MQTT_HOST,
-        username = BuildConfig.MQTT_USERNAME,
-        password = BuildConfig.MQTT_PASSWORD
-    )
+    private lateinit var mqttManager: MqttManager
     private var esp32Status by mutableStateOf("Connecting...")
     private var lastStatus by mutableStateOf("Waiting")
     private var isWaking by mutableStateOf(false)
@@ -73,6 +70,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        mqttManager = MqttManager(
+            host = BuildConfig.MQTT_HOST,
+            username = BuildConfig.MQTT_USERNAME,
+            password = BuildConfig.MQTT_PASSWORD,
+            clientId = "wakebridge-android-$androidId"
+        )
         mqttManager.connect()
         mqttManager.subscribeToStatus { status ->
             runOnUiThread {
