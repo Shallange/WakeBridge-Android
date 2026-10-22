@@ -8,6 +8,9 @@ Thumbs.db
 secrets.h
 *.key
 *.pem
+*.jks
+*.keystore
+keystore.properties
 
 # Logs
 *.log
