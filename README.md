@@ -70,7 +70,7 @@ The home screen is one centered power stage: a power ring, the PC state, a short
 ```mermaid
 flowchart LR
   Phone["Android app"]
-  Broker["HiveMQ Cloud"]
+  Broker["EMQX Cloud Serverless"]
   ESP["ESP32"]
   PC["Windows PC"]
 
@@ -80,7 +80,7 @@ flowchart LR
   ESP -- "ICMP echo" --> PC
 ```
 
-The phone and the ESP32 use MQTT 3 with username and password on port 8883. The ESP32 is the only device that can see the PC. Wake-on-LAN and ping both stay on the local network.
+The phone and the ESP32 use MQTT 3 with username and password on port 8883. The Android client id is `wakebridge-android-` plus that phone's ANDROID_ID, so each install has its own session. The ESP32 client id is `wakebridge-esp32`. The ESP32 is the only device that can see the PC. Wake-on-LAN and ping both stay on the local network.
 
 ## How it works
 
@@ -98,6 +98,8 @@ If no fresh online reading arrives within 60 seconds, the app leaves Waking and 
 
 **Presence.** On connect, the ESP32 publishes retained `online` to `wakebridge/esp32/status`. Its MQTT last will is retained `offline` on the same topic, so a dead session still tells the phone the bridge is gone. Until that topic delivers a message, the app shows Connecting. A phone that has not reached the broker is not shown as a confirmed ESP32 outage.
 
+If the phone loses the network while the app is still running, the MQTT client reconnects and signs in with the saved username and password. That stops when the process stops. The app does not keep a background service connected.
+
 Pings run only after Check, or during the short watch that follows Wake. The firmware does not poll the PC in the background.
 
 A PC that does not answer ICMP is reported offline. A host firewall can drop ping from a machine that is actually up, so Offline means "no ping reply," not a guaranteed power reading.
@@ -107,11 +109,11 @@ A PC that does not answer ICMP is reported offline. A host firewall can drop pin
 | Part | What it uses |
 | --- | --- |
 | Android | Kotlin 2.2, Jetpack Compose, Material 3, minSdk 26. App version 1.0. |
-| MQTT on Android | HiveMQ MQTT Client 1.3, MQTT 3, TLS on port 8883 |
+| MQTT on Android | HiveMQ MQTT Client 1.3 (the library), MQTT 3, TLS on port 8883 |
 | Firmware | Arduino-ESP32 3.x, PubSubClient, `WiFiClientSecure` |
 | PC reachability | ESP32 ICMP echo, one reply, 500 ms timeout |
 | Time | SNTP via `pool.ntp.org`, UTC timestamps |
-| Broker | HiveMQ Cloud, username and password |
+| Broker | EMQX Cloud Serverless, username and password |
 | PC | Windows, Wake-on-LAN |
 
 ## Project layout
@@ -119,7 +121,7 @@ A PC that does not answer ICMP is reported offline. A host firewall can drop pin
 ```text
 android/WakeBridgeAndroid/     Android Studio project
 esp32/wakeBridgeESP32/         Firmware sketch
-docs/mqtt-migration.md         Planned broker move
+docs/mqtt-migration.md         Broker migration notes
 docs/images/                   Screenshots and hardware photos
 ```
 
@@ -138,7 +140,7 @@ Local configuration stays out of git. `secrets.h` and `local.properties` are ign
    MQTT_PASSWORD=
    ```
 
-   `app/build.gradle.kts` reads those three keys from the Android project root. Port 8883 is fixed in the app. A separate MQTT user for the phone is recommended when the broker can restrict topics. WakeBridge does not create users or apply those restrictions.
+   `app/build.gradle.kts` reads those three keys from the Android project root. Port 8883 is fixed in the app. The MQTT client id is not one of these keys. The app sets it to `wakebridge-android-` plus the device ANDROID_ID when the screen starts. A separate MQTT user for the phone is recommended when the broker can restrict topics. WakeBridge does not create users or apply those restrictions.
 3. Run the debug build on a phone with internet access.
 
 The phone can be away from home. It only needs to reach the broker.
@@ -153,7 +155,7 @@ The phone can be away from home. It only needs to reach the broker.
 
 Use a second MQTT user for the ESP32 when the broker can limit each user to the topics it publishes and subscribes to. The firmware stores whichever username and password are in `secrets.h`. It does not configure broker permissions.
 
-`mqtt_ca.h` is the public TLS root. It is not a secret and does not belong in `secrets.h`.
+`mqtt_ca.h` holds the public TLS roots. It is not a secret and does not belong in `secrets.h`.
 
 ### Wake-on-LAN on the PC
 
@@ -165,9 +167,9 @@ Both clients use TLS on port 8883.
 
 The Android client uses `sslWithDefaultConfig()`, so it trusts the platform certificate store and checks the broker name.
 
-The ESP32 trusts the self-signed ISRG Root X1 certificate in `mqtt_ca.h` and checks the broker hostname. It starts SNTP after Wi-Fi connects and waits up to 15 seconds for a real clock before the first TLS handshake. Certificate dates cannot be checked against a clock that is still at the epoch. If NTP does not finish in time, the firmware logs that and retries later. It does not disable certificate checks.
+The ESP32 trusts the public roots in `mqtt_ca.h` and checks the broker hostname. DigiCert Global Root G2 covers the current broker. ISRG Root X1 is still in that file. It starts SNTP after Wi-Fi connects and waits up to 15 seconds for a real clock before the first TLS handshake. Certificate dates cannot be checked against a clock that is still at the epoch. If NTP does not finish in time, the firmware logs that and retries later. It does not disable certificate checks.
 
-Broker username and password live in `secrets.h` on the ESP32 and in `local.properties` for the Android build. Neither file is committed. The Android build copies the phone's username and password into `BuildConfig`, so they can be extracted from a compiled APK. Limit that broker user to the topics the phone publishes and subscribes to. That restriction is enforced by the broker, not by the app. The root in `mqtt_ca.h` is public.
+Broker username and password live in `secrets.h` on the ESP32 and in `local.properties` for the Android build. Neither file is committed. The Android build copies the phone's username and password into `BuildConfig`, so they can be extracted from a compiled APK. Limit that broker user to the topics the phone publishes and subscribes to. That restriction is enforced by the broker, not by the app. The roots in `mqtt_ca.h` are public.
 
 Give the phone and the ESP32 separate broker users when the service can restrict publish and subscribe per user. That split is a broker setting, not something WakeBridge implements. The phone publishes `wakebridge/desktop/command` and `wakebridge/desktop/check`, and subscribes to `wakebridge/desktop/status`, `wakebridge/desktop/power`, and `wakebridge/esp32/status`. The ESP32 publishes and subscribes to the matching topics, including its retained last will on `wakebridge/esp32/status`.
 
@@ -181,12 +183,10 @@ The app, firmware, wake path, on-demand power check, and home screen are in use.
 
 Still open before a wider public release:
 
-- The MQTT broker move is planned and has not been started. See [MQTT migration](docs/mqtt-migration.md).
 - One PC is configured at build time. There is no settings screen and no second target.
 - The phone shows Connecting until `wakebridge/esp32/status` arrives. That line covers both "not connected yet" and "connected, still waiting for the ESP32."
+- An unauthorized MQTT client has not been shown to be rejected. Two phones online at once have not been tested.
 
 ## MQTT migration
 
-**Status: planned. Not started.**
-
-A replacement broker is under consideration and is not in use. The topic contract, retained messages, and certificate rules are written down in [docs/mqtt-migration.md](docs/mqtt-migration.md).
+The broker in use is EMQX Cloud Serverless. Topic rules, certificate trust, and the checks that were run on the hardware are in [docs/mqtt-migration.md](docs/mqtt-migration.md).
