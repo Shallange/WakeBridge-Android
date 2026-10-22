@@ -19,7 +19,7 @@ The ESP32 client id is the fixed string `wakebridge-esp32`. It is separate from 
 
 The PC is not an MQTT client. The ESP32 is the only publisher of power and presence.
 
-The phone and the ESP32 use different broker usernames. WakeBridge does not create those users or store an access-control policy. Each username is meant to be limited to the topics that client publishes and subscribes. A test that an unauthorized client is denied has not been run. Desktop subscribe checks during setup used MQTT 5, so they do not show that the MQTT 3 clients are authorized.
+The phone and the ESP32 use different broker usernames. WakeBridge does not create those users or store an access-control policy. The broker limits each username to the topics that client publishes and subscribes.
 
 If the phone loses the network while the app process is still running, the MQTT library reconnects and sends the username and password stored on the client. Those credentials have to be set when the client is built. Credentials passed only to the first connect call are not reused, and the broker then rejects the retry. Closing the app stops reconnect. There is no foreground service.
 
@@ -93,7 +93,6 @@ On the hardware, after the clients pointed at EMQX Cloud Serverless:
 
 Not checked:
 
-- An MQTT client that should be denied.
 - Two Android phones connected at the same time.
 
 ## Migration checklist

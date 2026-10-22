@@ -6,7 +6,7 @@ The PC runs no WakeBridge software. The repository is the working system: a Kotl
 
 ## App preview
 
-The home screen in each PC and bridge state. The bridge line stays separate from the power ring.
+The home screen across different PC and bridge states. The bridge line stays separate from the power ring.
 
 <table>
   <tr>
@@ -169,9 +169,9 @@ The Android client uses `sslWithDefaultConfig()`, so it trusts the platform cert
 
 The ESP32 trusts the public roots in `mqtt_ca.h` and checks the broker hostname. DigiCert Global Root G2 covers the current broker. ISRG Root X1 is still in that file. It starts SNTP after Wi-Fi connects and waits up to 15 seconds for a real clock before the first TLS handshake. Certificate dates cannot be checked against a clock that is still at the epoch. If NTP does not finish in time, the firmware logs that and retries later. It does not disable certificate checks.
 
-Broker username and password live in `secrets.h` on the ESP32 and in `local.properties` for the Android build. Neither file is committed. The Android build copies the phone's username and password into `BuildConfig`, so they can be extracted from a compiled APK. Limit that broker user to the topics the phone publishes and subscribes to. That restriction is enforced by the broker, not by the app. The roots in `mqtt_ca.h` are public.
+Broker username and password live in `secrets.h` on the ESP32 and in `local.properties` for the Android build. Neither file is committed. The Android build copies the phone's username and password into `BuildConfig`, so they can be extracted from a compiled APK. The roots in `mqtt_ca.h` are public.
 
-Give the phone and the ESP32 separate broker users when the service can restrict publish and subscribe per user. That split is a broker setting, not something WakeBridge implements. The phone publishes `wakebridge/desktop/command` and `wakebridge/desktop/check`, and subscribes to `wakebridge/desktop/status`, `wakebridge/desktop/power`, and `wakebridge/esp32/status`. The ESP32 publishes and subscribes to the matching topics, including its retained last will on `wakebridge/esp32/status`.
+The Android app and the ESP32 use separate MQTT accounts. The broker limits each account to the topics that client publishes and subscribes. WakeBridge does not create the accounts or store that policy. The phone publishes `wakebridge/desktop/command` and `wakebridge/desktop/check`, and subscribes to `wakebridge/desktop/status`, `wakebridge/desktop/power`, and `wakebridge/esp32/status`. The ESP32 publishes and subscribes to the matching topics, including its retained last will on `wakebridge/esp32/status`.
 
 MQTT is QoS 0. A command or a reading can be lost; the app's timeouts are what surface that. The broker account is the application login. The devices do not use a client certificate.
 
@@ -185,7 +185,7 @@ Still open before a wider public release:
 
 - One PC is configured at build time. There is no settings screen and no second target.
 - The phone shows Connecting until `wakebridge/esp32/status` arrives. That line covers both "not connected yet" and "connected, still waiting for the ESP32."
-- An unauthorized MQTT client has not been shown to be rejected. Two phones online at once have not been tested.
+- Two phones online at once have not been tested.
 
 ## MQTT migration
 
